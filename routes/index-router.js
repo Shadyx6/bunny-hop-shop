@@ -22,11 +22,89 @@ const {getDiscountForProduct} = require("../utils/discount")
 const {orderEmailTemplate} = require("../helper/orderEmailTemplate");
 const addToCart = require('../middlewares/addto-cart');
 
+// router.get('/', isLoggedIn, addToCart, async function (req, res) {
+//     let error = req.flash('error');
+//     let feat = await productModel.find({ tags: 'featured' });
+//     let trendy = await productModel.find({ tags: 'trend' });
+
+//     res.render('index', {
+//         user: res.locals.user,
+//         feat,
+//         trendy,
+//         error,
+//         req,
+//         cart: res.locals.cart
+//     });
+
+//     // if (!req.user || req.user === 'unsigned') {
+        
+//     //     return res.render('index', {
+//     //         user: 'unsigned',
+//     //         feat,
+//     //         error,
+//     //         trendy,
+//     //         req
+//     //     });
+//     // }
+
+
+//     // let user = await userModel.findOne({ username: req.user.username });
+//     // let cart = user?.cart || [];
+
+//     // res.render('index', {
+//     //     user: req.user,
+//     //     feat,
+//     //     error,
+//     //     trendy,
+//     //     req,
+//     //     cart
+//     // });
+// });
+
 router.get('/', isLoggedIn, addToCart, async function (req, res) {
     let error = req.flash('error');
-    let feat = await productModel.find({ tags: 'featured' });
-    let trendy = await productModel.find({ tags: 'trend' });
 
+    // 1) Active sales find karo
+    const now = new Date();
+    const activeSales = await saleModel.find({
+        startDate: { $lte: now },
+        endDate: { $gte: now }
+    });
+
+    // 2) Featured products fetch
+    let featProducts = await productsModel.find({ tags: 'featured' });
+
+    // 3) Trendy products fetch
+    let trendyProducts = await productsModel.find({ tags: 'trend' });
+
+    // Function: product me sale percentage inject karne ke liye
+    function applySale(products) {
+        return products.map(p => {
+            const applicable = activeSales.filter(s =>
+                s.productIds.includes(p._id.toString())
+            );
+
+            let discountPercent = 0;
+
+            if (applicable.length > 0) {
+                const best = applicable.reduce((a, b) =>
+                    a.percentage > b.percentage ? a : b
+                );
+                discountPercent = best.percentage;
+            }
+
+            return {
+                ...p.toObject(),
+                discountPercent
+            };
+        });
+    }
+
+    // 4) Apply sale to both lists
+    let feat = applySale(featProducts);
+    let trendy = applySale(trendyProducts);
+
+    // 5) Render
     res.render('index', {
         user: res.locals.user,
         feat,
@@ -35,31 +113,8 @@ router.get('/', isLoggedIn, addToCart, async function (req, res) {
         req,
         cart: res.locals.cart
     });
-
-    // if (!req.user || req.user === 'unsigned') {
-        
-    //     return res.render('index', {
-    //         user: 'unsigned',
-    //         feat,
-    //         error,
-    //         trendy,
-    //         req
-    //     });
-    // }
-
-
-    // let user = await userModel.findOne({ username: req.user.username });
-    // let cart = user?.cart || [];
-
-    // res.render('index', {
-    //     user: req.user,
-    //     feat,
-    //     error,
-    //     trendy,
-    //     req,
-    //     cart
-    // });
 });
+
 
 router.get('/access', redirectIfLogin, function (req, res) {
     let registerError = req.flash('registerError')
@@ -291,9 +346,6 @@ router.get('/products/:id', isLoggedIn, addToCart, async (req, res) => {
     if (discountPercent > 0) {
         discountedPrice = product.price - (product.price * discountPercent / 100);
     }
-
-
-
 
     // if (!req.user || req.user === 'unsigned') {
     //     return res.render('product', {
