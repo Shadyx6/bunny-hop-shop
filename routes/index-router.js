@@ -66,17 +66,21 @@ const mongoose = require('mongoose');
 router.get('/', isLoggedIn, addToCart, async function (req, res) {
     let error = req.flash('error');
 
+    
     const now = new Date();
     const activeSales = await saleModel.find({
         startDate: { $lte: now },
         endDate: { $gte: now }
     });
 
+
+
     let featProducts = await productsModel.find({ tags: 'featured' });
+
 
     let trendyProducts = await productsModel.find({ tags: 'trend' });
 
-
+   
     function applySale(products) {
         return products.map(p => {
             const applicable = activeSales.filter(s =>
@@ -84,17 +88,19 @@ router.get('/', isLoggedIn, addToCart, async function (req, res) {
             );
 
             let discountPercent = 0;
-
+            let discountPrice = 0
             if (applicable.length > 0) {
                 const best = applicable.reduce((a, b) =>
                     a.percentage > b.percentage ? a : b
                 );
                 discountPercent = best.percentage;
+       discountPrice = Math.round(p.price - (p.price * discountPercent / 100));
             }
 
             return {
                 ...p.toObject(),
-                discountPercent
+                discountPercent,
+                discountPrice
             };
         });
     }
@@ -363,6 +369,7 @@ router.get('/products/:id', isLoggedIn, addToCart, async (req, res) => {
 });
 
 router.get('/clothings/:category', isLoggedIn, async (req, res) => {
+  try {
     const category = req.params.category.toLowerCase();
     const displayCategory = category.charAt(0).toUpperCase() + category.slice(1);
 
@@ -370,52 +377,74 @@ router.get('/clothings/:category', isLoggedIn, async (req, res) => {
     const searchTerm = req.query.searched?.toLowerCase();
     const isUnsigned = !req.user || req.user === 'unsigned';
 
-
     let query = {
-        category: { $in: [category] },
-        isApproved: true
+      category: { $in: [category] },
+      isApproved: true
     };
 
     if (gender === 'boy' || gender === 'boys') query.gender = 'boy';
     if (gender === 'girl' || gender === 'girls') query.gender = 'girl';
 
+
     if (searchTerm) {
-        const selectedProducts = await productsModel.find({
-            title: { $regex: searchTerm, $options: 'i' }
-        });
+      let selectedProducts = await productsModel.find({
+        title: { $regex: searchTerm, $options: 'i' }
+      });
 
-        return res.render('categorized', {
-            user: req.user,
-            req,
-            cart: isUnsigned ? [] : (await userModel.findOne({ username: req.user.username })).cart,
-            selectedProducts,
-            displayCategory,
-            searched: true,
-            request: req.query.searched,
-            cat: false,
-            gen: false
-        });
-    }
-
- 
-    let cart = [];
-    if (!isUnsigned) {
-        const dbUser = await userModel.findOne({ username: req.user.username });
-        cart = dbUser.cart || [];
-    }
-
-    const selectedProducts = await productsModel.find(query);
-
-    return res.render('categorized', {
+      selectedProducts = await Promise.all(
+        selectedProducts.map(async (p) => {
+          const discountInfo = await getDiscountForProduct(p._id);
+          p = p.toObject();
+          p.discountInfo = discountInfo;
+          return p;
+        })
+      );
+  
+      return res.render('categorized', {
         user: req.user,
         req,
-        cart,
+        cart: isUnsigned ? [] : (await userModel.findOne({ username: req.user.username })).cart,
         selectedProducts,
         displayCategory,
-        category,
-        cat: true,
+        searched: true,
+        request: req.query.searched,
+        cat: false,
         gen: false
+      });
+    }
+
+    let cart = [];
+    if (!isUnsigned) {
+      const dbUser = await userModel.findOne({ username: req.user.username });
+      cart = dbUser.cart || [];
+    }
+
+    let selectedProducts = await productsModel.find(query);
+
+
+    selectedProducts = await Promise.all(
+      selectedProducts.map(async (p) => {
+        const discountInfo = await getDiscountForProduct(p._id);
+        p = p.toObject();
+        p.discountInfo = discountInfo;
+        return p;
+      })
+    );
+    console.log(selectedProducts , "all here")
+    return res.render('categorized', {
+      user: req.user,
+      req,
+      cart,
+      selectedProducts,
+      displayCategory,
+      category,
+      cat: true,
+      gen: false
     });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Failed to load category");
+  }
 });
 
 
@@ -464,19 +493,42 @@ router.get('/clothings/:category', isLoggedIn, async (req, res) => {
 // })
 
 router.get('/fits/:gender', isLoggedIn, async (req, res) => {
-    console.log(req.params.gender.toLowerCase().slice(0,-1))
-    let selectedProducts = await productsModel.find({ gender: req.params.gender.toLowerCase().slice(0,-1), isApproved: true });
+  try {
+
+    const genderParam = req.params.gender.toLowerCase().slice(0, -1);
+    let selectedProducts = await productsModel.find({ gender: genderParam, isApproved: true });
+
+    selectedProducts = await Promise.all(
+      selectedProducts.map(async (p) => {
+        const discountInfo = await getDiscountForProduct(p._id);
+        p = p.toObject(); 
+        p.discountInfo = discountInfo;
+        return p;
+      })
+    );
 
     let gender = req.params.gender.toLowerCase();
     let displayGender = gender.charAt(0).toUpperCase() + gender.slice(1);
 
     let cart = null;
     if (req.user && req.user.username) {
-        let dbUser = await userModel.findOne({ username: req.user.username });
-        cart = dbUser?.cart || null;
+      let dbUser = await userModel.findOne({ username: req.user.username });
+      cart = dbUser?.cart || null;
     }
 
-    return res.render('categorized', { user: req.user || null, selectedProducts, gender: displayGender, gen: true, cat: false, cart, req});
+    return res.render('categorized', {
+      user: req.user || null,
+      selectedProducts,
+      gender: displayGender,
+      gen: true,
+      cat: false,
+      cart,
+      req
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Failed to load fits");
+  }
 });
 
 router.get('/login', redirectIfLogin, (req, res) => {
@@ -640,6 +692,8 @@ router.get('/remove-from-cart/:id', isLoggedIn, async (req, res) => {
         res.redirect('/cart')
     } catch (error) {
         console.log(error)
+        req.flash("error", "Something went wrong")
+        return res.redirect("/cart")
     }
 })
 router.get('/sub-quantity/:id', isLoggedIn, async (req, res) => {
@@ -656,14 +710,15 @@ router.get('/sub-quantity/:id', isLoggedIn, async (req, res) => {
         product.quantity -= 1
     } else{
         product.quantity = 1
-        req.flash('error', 'cannot order more than 500 products')
+        req.flash('error', 'You must have at least one product to purchase')
         return res.redirect('/cart')
     }
     res.cookie("guestCart", JSON.stringify(guestCart), { httpOnly: true });
     return res.redirect('/cart')
 
     }
-    let product = user.cart.find(product => product._id == req.params.id)
+    let product = user.cart.find(product => product.productId.toString() == req.params.id)
+    console.log(product)
     if(product && product.quantity > 1) {
         product.quantity -= 1
     } else{
@@ -675,7 +730,8 @@ router.get('/sub-quantity/:id', isLoggedIn, async (req, res) => {
         await user.save()
         res.redirect('/cart')
     } catch (error) {
-        console.log(error)
+        req.flash("error", "Something went wrong")
+        return res.redirect("/cart")
     }
 
 })
@@ -689,30 +745,33 @@ router.get('/add-quantity/:id', isLoggedIn, async (req, res) => {
         }
     const product = guestCart.find(p => p.productId === req.params.id)
 
-    if(product && product.quantity < 500) {
+    if(product && product.quantity < 200) {
         product.quantity += 1
     } else{
-        product.quantity = 500
-        req.flash('error', 'cannot order more than 500 products')
+        product.quantity = 200
+        req.flash('error', 'cannot order more than 200 products')
         return res.redirect('/cart')
     }
     res.cookie("guestCart", JSON.stringify(guestCart), { httpOnly: true });
     return res.redirect('/cart')
 
     }
-    let product = user.cart.find(product => product._id == req.params.id)
-    if(product && product.quantity < 100) {
+    console.log(user.cart)
+    let product = user.cart.find(product => product.productId.toString() === req.params.id)
+    console.log(product)
+    if(product && product.quantity < 200) {
         product.quantity += 1
     } else{
-        product.quantity = 100
-        req.flash('error', 'cannot order more than 100 products')
+        product.quantity = 200
+        req.flash('error', 'cannot order more than 200 products')
         return res.redirect('/cart')
     }
     try {
         await user.save()
         res.redirect('/cart')
     } catch (error) {
-        console.log(error)
+        req.flash("error", "Something went wrong")
+        return res.redirect("/cart")
     }
 
 })
