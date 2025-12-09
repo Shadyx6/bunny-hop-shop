@@ -108,10 +108,7 @@
   </main>
 
   <%- include('./partials/Footer.ejs') %>
-
-    <script>
-      // Simple script to re-trigger addToCart listener if it relies on DOM load
-      if (typeof addToCart === 'function') {
-        addToCart();
-      }
-    </script>
+  <script src="/javascripts/index.js"></script>
+<script>
+  addToCart();
+</script>

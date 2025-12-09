@@ -6,6 +6,7 @@ async function addToCart(req, res, next) {
             let guestCart = [];
             try {
                 guestCart = JSON.parse(decodeURIComponent(req.cookies.guestCart || "[]"));
+
             } catch (e) {
                 guestCart = [];
             }

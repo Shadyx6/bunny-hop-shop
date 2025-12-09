@@ -210,7 +210,6 @@ router.delete('/products/:id', isLoggedIn, async (req, res) => {
 });
 
 
-
 router.get("/upload-hero", isLoggedIn, async (req, res) => {
   try {
     let seller = await userModel.findOne({ username: req.user.username });
@@ -242,7 +241,7 @@ router.post("/upload-hero", isLoggedInStrict, isSeller,uploadHero.single("hero")
       }
 
       const imageUrl = req.file.path;
-      console.log("Image URL:", imageUrl);
+
 
       if (!imageUrl) {
         req.flash("error", "Unable to get image URL from upload");
@@ -255,7 +254,7 @@ router.post("/upload-hero", isLoggedInStrict, isSeller,uploadHero.single("hero")
       essentials.heroImage = imageUrl;
       await essentials.save();
 
-      console.log("Updated hero:", essentials.heroImage);
+  
       req.flash("success", "Hero image updated successfully!");
       return res.redirect("/seller/upload-hero");
     } catch (err) {

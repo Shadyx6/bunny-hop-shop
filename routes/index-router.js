@@ -297,7 +297,6 @@ router.post('/login', async (req, res) => {
   let { email, password } = req.body
   let user = await userModel.findOne({ email })
   const isMobile = /mobile/i.test(req.headers['user-agent']);
-  console.log(isMobile)
   if (!user) {
     req.flash('loginError', 'please register first');
     return res.redirect(isMobile ? '/login' : '/access');
@@ -399,7 +398,7 @@ router.get('/products/:id', isLoggedIn, addToCart, async (req, res) => {
   res.render('product', { product, user: res.locals.user, cart: res.locals.cart, productPage: true, discountPercent, discountedPrice, discountName, discountEnd });
 });
 
-router.get('/clothings/:category', isLoggedIn, async (req, res) => {
+router.get('/clothings/:category', isLoggedIn, addToCart, async (req, res) => {
   try {
     const category = req.params.category.toLowerCase();
     const displayCategory = category.charAt(0).toUpperCase() + category.slice(1);
@@ -434,7 +433,7 @@ router.get('/clothings/:category', isLoggedIn, async (req, res) => {
       return res.render('categorized', {
         user: req.user,
         req,
-        cart: isUnsigned ? [] : (await userModel.findOne({ username: req.user.username })).cart,
+        cart: isUnsigned ? res.locals.cart || [] : (await userModel.findOne({ username: req.user.username })).cart,
         selectedProducts,
         displayCategory,
         searched: true,
@@ -461,11 +460,10 @@ router.get('/clothings/:category', isLoggedIn, async (req, res) => {
         return p;
       })
     );
-    console.log(selectedProducts, "all here")
     return res.render('categorized', {
       user: req.user,
       req,
-      cart,
+      cart: isUnsigned ? res.locals.cart || [] : cart,
       selectedProducts,
       displayCategory,
       category,
@@ -523,11 +521,12 @@ router.get('/clothings/:category', isLoggedIn, async (req, res) => {
 //     res.render('categorized', { user: req.user, selectedProducts, gender, gen: true, cat: false, cart , req: req})
 // })
 
-router.get('/fits/:gender', isLoggedIn, async (req, res) => {
+router.get('/fits/:gender', isLoggedIn, addToCart, async (req, res) => {
   try {
 
     const genderParam = req.params.gender.toLowerCase().slice(0, -1);
     let selectedProducts = await productsModel.find({ gender: genderParam, isApproved: true });
+  const isUnsigned = !req.user || req.user === 'unsigned';
 
     selectedProducts = await Promise.all(
       selectedProducts.map(async (p) => {
@@ -553,7 +552,7 @@ router.get('/fits/:gender', isLoggedIn, async (req, res) => {
       gender: displayGender,
       gen: true,
       cat: false,
-      cart,
+      cart: isUnsigned ? res.locals.cart || [] : cart ,
       req
     });
   } catch (err) {
@@ -664,7 +663,7 @@ router.get('/cart', isLoggedIn, async (req, res) => {
     for (let item of guestCart) {
       item.discountInfo = await getDiscountForProduct(item.productId);
     }
-    console.log(guestCart)
+
     return res.render('cart', {
       user: "unsigned",
       cart: guestCart,
