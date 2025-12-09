@@ -179,7 +179,7 @@
         style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 2rem;">
         <% if(trendy.length> 0) { %>
           <% trendy.forEach(function(product){ %>
-            <div class="product-card" onclick="window.location.href='/clothings/<%= product._id %>'"
+            <div class="product-card" onclick="window.location.href='/products/<%= product._id %>'"
               style="cursor: pointer; background: white; border-radius: var(--border-radius-lg); padding: 1rem;">
               <div
                 style="width: 100%; height: 300px; border-radius: var(--border-radius-md); overflow: hidden; margin-bottom: 1rem;">

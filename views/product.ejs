@@ -114,44 +114,44 @@
 
       // Add to Cart Logic
       const addBtns = document.querySelectorAll('.add-btn');
-      addBtns.forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const id = btn.dataset.fitid; // Note: dataset keys are lowercase
-          try {
-            const res = await fetch(`/add-to-cart/${id}`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' }
-            });
-            const data = await res.json();
-
-            if (data) {
-              // Update Cart Badge
-              const cartCount = document.querySelector('.nav-icons .ri-shopping-cart-line + span');
-              let count = 0;
-              if (data.cart) {
-                count = data.cart.reduce((sum, item) => sum + (item.quantity || 0), 0);
-              }
-
-              if (cartCount) {
-                cartCount.innerText = count;
-              } else if (count > 0) {
-                // Create badge if not exists
-                const iconLink = document.querySelector('a[href="/cart"]');
-                const span = document.createElement('span');
-                span.style.cssText = "position: absolute; top: -8px; right: -8px; background: var(--color-accent-primary); color: white; font-size: 0.7rem; padding: 2px 6px; border-radius: 50%;";
-                span.innerText = count;
-                iconLink.appendChild(span);
-              }
-
-              // Show Success Toast
-              showToast("Added to Cart! 🐰");
-            }
-          } catch (err) {
-            console.error(err);
-            showToast("Something went wrong");
-          }
-        });
+addBtns.forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const id = btn.dataset.fitid;
+    try {
+      const res = await fetch(`/add-to-cart/${id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
       });
+      const data = await res.json();
+
+      if (data) {
+        // Prefer count provided by server if available
+        const count =
+          typeof data.cartCount === 'number'
+            ? data.cartCount
+            : (Array.isArray(data.cart) ? data.cart.length : 0);
+
+        // Update Cart Badge
+        const cartIcon = document.querySelector('a[href="/cart"] .ri-shopping-cart-line');
+        let cartCount = document.querySelector('.nav-icons .ri-shopping-cart-line + span');
+
+        if (cartCount) {
+          cartCount.innerText = count;
+        } else if (count > 0 && cartIcon) {
+          const span = document.createElement('span');
+          span.style.cssText = "position: absolute; top: -8px; right: -8px; background: var(--color-accent-primary); color: white; font-size: 0.7rem; padding: 2px 6px; border-radius: 50%;";
+          span.innerText = count;
+          cartIcon.parentElement.appendChild(span);
+        }
+
+        showToast("Added to Cart! 🐰");
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Something went wrong");
+    }
+  });
+});
 
       function showToast(message) {
         const toast = document.createElement('div');

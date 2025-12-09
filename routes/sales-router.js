@@ -13,7 +13,7 @@ router.get("/", isLoggedIn, isSeller, async (req, res) => {
         const user = await userModel.findOne({username: req.user.username})
         const sales = await saleModel.find().sort({ createdAt: -1 });
         const products = await productModel.find().sort({ title: 1 });
-        console.log(saleError)
+   
 
         res.render("sales", {
             sales,

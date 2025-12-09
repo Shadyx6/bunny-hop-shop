@@ -199,14 +199,13 @@ function addToCart() {
 
   addBtn.forEach((btn) => {
     btn.addEventListener('click', async () => {
-
       const id = btn.getAttribute('data-fitId');
 
       try {
         const res = await fetch(`/add-to-cart/${id}`, { method: 'POST' });
         const data = await res.json();
-
         btn.innerHTML = `<i class="ri-check-line"></i> Added to cart`;
+        console.log(data.cart)
         quantity.textContent = data.cart.length;
 
       } catch (error) {
