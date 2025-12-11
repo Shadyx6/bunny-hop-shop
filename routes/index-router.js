@@ -24,6 +24,7 @@ const { orderEmailTemplate } = require("../helper/orderEmailTemplate");
 const addToCart = require('../middlewares/addto-cart');
 const mongoose = require('mongoose');
 const essentialsModel = require('../models/essentials-model');
+const testimonial = require('../models/testimonial');
 
 
 // router.get('/', isLoggedIn, addToCart, async function (req, res) {
@@ -78,6 +79,7 @@ router.get('/', isLoggedIn, addToCart, async function (req, res) {
     let featProducts = await productsModel.find({ tags: 'featured' });
     let trendyProducts = await productsModel.find({ tags: 'trend' });
     let categories = await categoryModel.find({});
+    let testimonials = await testimonial.find().sort({ createdAt: -1 });
 
     function applySale(products) {
       return products.map(p => {
@@ -115,7 +117,8 @@ router.get('/', isLoggedIn, addToCart, async function (req, res) {
       error: error,
       req: req,
       cart: res.locals.cart,
-      essentials
+      essentials,
+      testimonials
     });
   } catch (err) {
     console.error("Homepage Error:", err);
@@ -127,7 +130,8 @@ router.get('/', isLoggedIn, addToCart, async function (req, res) {
       error: ["Something went wrong loading the homepage."],
       req: req,
       cart: res.locals.cart || [],
-      heroImg
+      heroImg,
+      testimonials: []
     });
   }
 });

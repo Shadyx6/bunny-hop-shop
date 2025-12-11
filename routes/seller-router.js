@@ -12,6 +12,7 @@ const productModel = require('../models/product-model')
 const heroStorage = require("../config/hero-storage")
 const categoryModel = require('../models/category-model');
 const essentialsModel  = require('../models/essentials-model')
+const testimonial = require('../models/testimonial')
 const upload = multer({ storage });
 const uploadHero = multer({ storage: heroStorage });
 
@@ -265,11 +266,72 @@ router.post("/upload-hero", isLoggedInStrict, isSeller,uploadHero.single("hero")
   }
 );
 
+router.get('/testimonial', isLoggedIn, async (req, res) => {
+  try {
+    let seller = await userModel.findOne({ username: req.user.username });
+    let error = req.flash('error');
+    let success = req.flash('success');
 
+    let testimonials = await testimonial.find({ addedBy: req.user.username });
+    
+    let editingTestimonial = null;
+    if (req.query.edit) {
+      editingTestimonial = await testimonial.findById(req.query.edit);
+    }
 
+    res.render('testimonial', { 
+      user: req.user, 
+      cart: seller.cart,
+      error: error,
+      success: success,
+      testimonials,
+      editingTestimonial
+    });
+  } catch (error) {
+    req.flash("serverError", "Something went wrong");
+    res.redirect("/");
+  }
+});
 
+router.post('/testimonial', isLoggedIn, async (req, res) => {
+  try {
+    const { username, message, instagramLink } = req.body;
 
+    let addTestimonial = new testimonial({ username, message, instagramLink, addedBy: req.user.username });
 
+    await addTestimonial.save();
 
+    res.redirect('/seller/testimonial');
+  } catch (err) {
+    console.log(err);
+    res.send('Error adding testimonial');
+  }
+});
+router.post('/testimonial/delete/:id', isLoggedIn, async (req, res) => {
+  const t = await testimonial.findById(req.params.id);
+  if (t.addedBy === req.user.username) {
+    await testimonial.findByIdAndDelete(req.params.id);
+  }
+  res.redirect('/seller/testimonial');
+});
+
+router.get('/testimonial/edit/:id', async (req, res) => {
+  try {
+    let test = await testimonial.findById(req.params.id);
+    res.render('editTestimonial', { test });
+  } catch (error) {
+    console.log(error);
+    res.redirect('/seller/testimonial');
+  }
+});
+
+router.post('/testimonial/edit/:id', isLoggedIn, async (req, res) => {
+  const t = await testimonial.findById(req.params.id);
+  if (t.addedBy === req.user.username) {
+    const { message, instagramLink, username } = req.body;
+    await testimonial.findByIdAndUpdate(req.params.id, { message, instagramLink, username });
+  }
+  res.redirect('/seller/testimonial');
+});
 
 module.exports = router
