@@ -6,17 +6,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>BunnyHop Shop - Your Baby's Choice</title>
   <link rel="shortcut icon" href="/media/logo.jpg" type="image/x-icon">
-  <!-- Use proper Design System -->
+
   <link rel="stylesheet" href="/stylesheets/design-system.css" />
   <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.4/gsap.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.4/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.4/ScrollTrigger.min.js"></script>
+  <link rel="stylesheet" href="/stylesheets/tw-output.css">
+<link rel="stylesheet" href="/stylesheets/styles.css">
+
 </head>
 
 <body>
 <% const totalItems = Array.isArray(cart) ? cart.length : 0; %>
-<% console.log("Total items:", totalItems, cart.length); %>
+
 
     <header>
       <div class="container">
@@ -28,7 +31,7 @@
           </button>
 
           <!-- Logo -->
-          <a href="/" class="logo">
+          <a aria-colspan="flex " href="/" class="logo">
             Bunny <span class="text-accent">Hop</span>
           </a>
 
@@ -59,27 +62,38 @@
             <!-- Cart -->
             <a href="/cart" style="position: relative;">
               <i class="ri-shopping-cart-line"></i>
-              <% if(totalItems> 0) { %>
-                <span class="quantity"
-                  style="position: absolute; top: -8px; right: -8px; background: var(--color-accent-primary); color: white; font-size: 0.7rem; padding: 2px 6px; border-radius: 50%;">
-                  <%= totalItems %>
-                </span>
-                <% } %>
+<span 
+  id="cartQuantity"
+  class="quantity"
+  style="position: absolute; top: -8px; right: -8px; background: var(--color-accent-primary); 
+         color: white; font-size: 0.7rem; padding: 2px 6px; border-radius: 50%;
+         display: <%= totalItems > 0 ? 'inline-block' : 'none' %>;">
+  <%= totalItems %>
+</span>
             </a>
 
             <!-- User Auth -->
             <% if (!user || user==='unsigned' ) { %>
-              <a href="/access" class="btn btn-primary" style="padding: 0.5rem 1.5rem; font-size: 0.9rem;">Sign In</a>
+              <a href="/access" class="btn btn-primary signin" style="padding: 0.5rem 1.5rem; font-size: 0.9rem;">Sign In</a>
               <% } else { %>
-                <div style="display: flex; align-items: center; gap: 10px;">
-                  <span style="font-size: 0.9rem; font-weight: 500;">
-                    <%= user.username %>
-                  </span>
-                  <% if(user.isSeller) { %>
-                    <a href="/seller/dashboard" title="Dashboard"><i class="ri-dashboard-line"></i></a>
-                    <% } %>
-                      <a href="/logout" style="color: red; font-size: 0.9rem;">Logout</a>
-                </div>
+<div class="relative flex ">
+  <!-- Username button -->
+  <button id="userDropdownBtn" class="text-sm font-medium px-2 py-1 rounded hover:bg-gray-100 focus:outline-none transition">
+    <%= user.username %>
+  </button>
+
+  <!-- Seller Dashboard Icon -->
+  <% if(user.isSeller) { %>
+    <a href="/seller/dashboard" title="Dashboard" class="text-lg ml-2 hover:text-gray-700 transition">
+      <i class="ri-dashboard-line"></i>
+    </a>
+  <% } %>
+
+  <!-- Logout dropdown -->
+    <a href="/logout" class="block p-2 logoutbtn text-red-600 text-sm hover:bg-gray-100 rounded-md">Logout</a>
+</div>
+
+
                 <% } %>
           </div>
         </nav>
@@ -102,6 +116,7 @@
           <a href="/clothings/hoodies">Hoodies</a>
           <a href="/clothings/coats">Coats</a>
           <a href="/orders">My Orders</a>
+          <a href="/logout">Logout</a>
         </div>
       </div>
     </header>
@@ -111,12 +126,37 @@
       @media (max-width: 768px) {
         .nav-links {
           display: none !important;
-        }
+        } 
 
         #toggleOpen {
           display: block !important;
         }
       }
+@media (max-width: 768px) {
+  .logoutbtn {
+    display: none !important;
+  }
+}
+
+
     </style>
 
     <script src="/javascripts/index.js"></script>
+    <script>
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.getElementById('userDropdownBtn');
+  const dropdown = document.getElementById('userDropdown');
+
+  btn?.addEventListener('click', (e) => {
+    e.stopPropagation(); // prevent closing immediately
+    dropdown.classList.toggle('hidden');
+  });
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!dropdown.contains(e.target) && !btn.contains(e.target)) {
+      dropdown.classList.add('hidden');
+    }
+  });
+});
+</script>
