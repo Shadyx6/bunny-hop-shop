@@ -889,10 +889,13 @@ router.get('/checkout/:id', isLoggedIn, async (req, res) => {
 //   });
 // });
 
-router.get('/order/:id', async (req, res) => {
+router.get('/order/:id', isLoggedIn, async (req, res) => {
   try {
     const orderId = req.params.id;
-
+    const isUnsigned = !req.user || req.user === "unsigned"
+    if(!isUnsigned){
+      var user = userModel.findOne({username: req.user.username})
+    }
     // Validate ObjectId
     if (!mongoose.Types.ObjectId.isValid(orderId)) {
       return res.status(400).send("Invalid order ID");
@@ -911,7 +914,8 @@ router.get('/order/:id', async (req, res) => {
     res.render('success-checkout', {
       user: req.user || null,
       order: order,
-      userType
+      userType,
+      cart: isUnsigned ? res.locals.cart || [] : user.cart ,
     });
 
   } catch (err) {
